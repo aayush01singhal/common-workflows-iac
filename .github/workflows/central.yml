@@ -16,20 +16,7 @@ on:
         required: true
         default: "."
 
-      change_ref:
-        description: "Change referance ID."
-        required: true
-        type: string
 
-      change_reason:
-        description: "Reason for change."
-        required: true
-        type: string
-
-      rollback_plan:
-        description: "Rollback plan."
-        required: true
-        type: string
 
 permissions:
   contents: read
