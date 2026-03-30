@@ -1,0 +1,60 @@
+name: "Preflight checks.."
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        required: true
+        type: string
+      working_directory:
+        required: true
+        type: string
+    outputs:
+      selected_branch:
+        description: "Branch to checkout based on environment"
+        value: ${{ jobs.setup.outputs.selected_branch }}
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: "Evaluate environment branch rule"
+    runs-on: [self-hosted, Windows]
+    outputs:
+      selected_branch: ${{ steps.determine_branch.outputs.branch }}
+
+    steps:
+      - name: Determine expected branch
+        id: determine_branch
+        shell: powershell
+        run: |
+          $env_input = "${{ inputs.target_env }}"
+          if ($env_input -eq "production" -or $env_input -eq "drhub") {
+            $branch = "main"
+          } else {
+            $branch = $env_input
+          }
+          echo "branch=$branch" >> $env:GITHUB_OUTPUT
+
+      - name: Validate dispatch branch matches environment rule.
+        shell: powershell
+        run: |
+          $expected = "${{ steps.determine_branch.outputs.branch }}"
+          $actual = "${{ github.ref_name }}"
+
+          if ($expected -ne $actual) {
+            throw "Blocked: run branch '$actual' must match expected branch '$expected' for target_env='${{ inputs.target_env }}'."
+          }
+
+      - name: Validate working_directory is safe.
+        shell: powershell
+        run: |
+          $wd = "${{ inputs.working_directory }}".Trim()
+
+          if ([string]::IsNullOrWhiteSpace($wd)) { throw "working_directory is empty" }
+          if ($wd.Contains("..")) { throw "Blocked: working_directory must not contain '..'" }
+          if ($wd.StartsWith("/") -or $wd.StartsWith("\")) { throw "Blocked: working_directory must be relative" }
+          if ($wd.StartsWith(".github") -or $wd.StartsWith(".git")) { throw "Blocked: working_directory must not target repo control folders" }
+
+          Write-Host "working_directory validated: $wd"
