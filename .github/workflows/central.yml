@@ -41,9 +41,7 @@ jobs:
     with:
       target_env: ${{ inputs.target_env }}      
       working_directory: ${{ inputs.working_directory }}
-      change_ref: ${{ inputs.change_ref }}
-      change_reason: ${{ inputs.change_reason }}
-      rollback_plan: ${{ inputs.rollback_plan }}
+
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -55,8 +53,7 @@ jobs:
     uses: ./.github/workflows/approval-gate.yml
     with:
       target_env: ${{ inputs.target_env }}
-      change_ref: ${{ inputs.change_ref }}
-      change_reason: ${{ inputs.change_reason }}
+
 
   apply:
     name: "Apply"
