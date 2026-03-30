@@ -1,33 +1,28 @@
-name: "Workflow to deploy Terraform based infra as code."
-
+name: "Terraform deployment (orchestrator)"
 run-name: "TF ${{ inputs.target_env }} | ${{ inputs.change_ref }} | @${{ github.actor }} | ${{ github.ref_name }}"
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       target_env:
-        description: "Select Environment (uat, sit, production, drhub)"
         required: true
         type: choice
         options: [uat, sit, production, drhub]
 
       working_directory:
-        description: "Terraform config directory path."
         required: true
+        type: string
         default: "."
 
       change_ref:
-        description: "Change referance ID."
         required: true
         type: string
 
       change_reason:
-        description: "Reason for change."
         required: true
         type: string
 
       rollback_plan:
-        description: "Rollback plan."
         required: true
         type: string
 
@@ -36,21 +31,21 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "tf-${{ inputs.target_env }}-${{ inputs.working_directory }}"
+  group: tf-${{ inputs.target_env }}-${{ inputs.working_directory }}
   cancel-in-progress: false
 
 jobs:
   preflight:
-    name: "Preflight"
+    name: Preflight
     uses: ./.github/workflows/preflight-checks.yml
     with:
       target_env: ${{ inputs.target_env }}
       working_directory: ${{ inputs.working_directory }}
 
   plan:
-    name: "Plan"
+    name: Terraform plan
     needs: preflight
-    uses: ./.github/workflows/tf-plan.yml
+    uses: aayush01singhal/azure-paas-iac/.github/workflows/tf-plan.yml@main
     with:
       target_env: ${{ inputs.target_env }}
       selected_branch: ${{ needs.preflight.outputs.selected_branch }}
@@ -61,7 +56,7 @@ jobs:
     secrets: inherit
 
   approval:
-    name: "Approval gate"
+    name: Approval gate
     needs: plan
     uses: ./.github/workflows/approval-gate.yml
     with:
@@ -70,9 +65,9 @@ jobs:
       change_reason: ${{ inputs.change_reason }}
 
   apply:
-    name: "Apply"
+    name: Terraform apply
     needs: [plan, approval]
-    uses: ./.github/workflows/tf-apply.yml
+    uses: aayush01singhal/azure-paas-iac/.github/workflows/tf-apply.yml@main
     with:
       target_env: ${{ inputs.target_env }}
       working_directory: ${{ inputs.working_directory }}
