@@ -1,6 +1,6 @@
 name: "Workflow to deploy Terraform based infra as code."
 
-run-name: "TF ${{ inputs.target_env }} | ${{ inputs.change_ref }} | @${{ github.actor }} | ${{ github.ref_name }}"
+run-name: "TF ${{ inputs.target_env }} }"
 
 on:
   workflow_dispatch:
