@@ -52,8 +52,7 @@ jobs:
     needs: preflight
     uses: aayush01singhal/azure-paas-iac/.github/workflows/tf-plan.yml@main
     with:
-      target_env: ${{ inputs.target_env }}
-      selected_branch: ${{ needs.preflight.outputs.selected_branch }}
+      target_env: ${{ inputs.target_env }}      
       working_directory: ${{ inputs.working_directory }}
       change_ref: ${{ inputs.change_ref }}
       change_reason: ${{ inputs.change_reason }}
