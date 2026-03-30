@@ -79,8 +79,6 @@ jobs:
     with:
       target_env: ${{ inputs.target_env }}
       working_directory: ${{ inputs.working_directory }}
-      plan_commit_sha: ${{ needs.plan.outputs.plan_commit_sha }}
-      plan_artifact_name: ${{ needs.plan.outputs.plan_artifact_name }}
       change_ref: ${{ inputs.change_ref }}
     secrets:       
        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
