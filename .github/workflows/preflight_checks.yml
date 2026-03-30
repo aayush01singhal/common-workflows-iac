@@ -1,4 +1,3 @@
-
 name: Preflight checks
 
 on:
@@ -12,6 +11,7 @@ on:
         type: string
     outputs:
       selected_branch:
+        description: "Branch allowed for selected environment"
         value: ${{ jobs.setup.outputs.selected_branch }}
 
 permissions:
@@ -28,21 +28,24 @@ jobs:
         shell: powershell
         run: |
           if ("${{ inputs.target_env }}" -in @("production","drhub")) {
-            $branch="main"
+            $branch = "main"
           } else {
-            $branch="${{ inputs.target_env }}"
+            $branch = "${{ inputs.target_env }}"
           }
+
           "branch=$branch" >> $env:GITHUB_OUTPUT
 
-      - shell: powershell
+      - name: Validate branch
+        shell: powershell
         run: |
           if ("${{ github.ref_name }}" -ne "${{ steps.branch.outputs.branch }}") {
-            throw "Blocked: wrong branch for environment"
+            throw "Blocked: wrong branch '${{ github.ref_name }}' for environment '${{ inputs.target_env }}'"
           }
 
-      - shell: powershell
+      - name: Validate working directory
+        shell: powershell
         run: |
-          $wd="${{ inputs.working_directory }}"
+          $wd = "${{ inputs.working_directory }}"
           if ($wd.Contains("..") -or $wd.StartsWith("/") -or $wd.StartsWith(".git")) {
             throw "Unsafe working_directory"
           }
