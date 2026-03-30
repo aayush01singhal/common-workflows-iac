@@ -6,7 +6,7 @@ on:
     inputs:
       target_env:
         required: true
-        type: choice
+        type: string
         options: [uat, sit, production, drhub]
 
       working_directory:
