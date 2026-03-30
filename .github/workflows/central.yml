@@ -58,7 +58,10 @@ jobs:
       change_ref: ${{ inputs.change_ref }}
       change_reason: ${{ inputs.change_reason }}
       rollback_plan: ${{ inputs.rollback_plan }}
-    secrets: inherit
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
   approval:
     name: "Approval gate"
@@ -79,4 +82,8 @@ jobs:
       plan_commit_sha: ${{ needs.plan.outputs.plan_commit_sha }}
       plan_artifact_name: ${{ needs.plan.outputs.plan_artifact_name }}
       change_ref: ${{ inputs.change_ref }}
-    secrets: inherit
+    secrets:       
+       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
