@@ -1,0 +1,34 @@
+name: "Approval Gate"
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        required: true
+        type: string
+      change_ticket:
+        required: true
+        type: string
+      change_reason:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  approval:
+    name: "Approval - ${{ inputs.target_env }} | ${{ inputs.change_ticket }}"
+    runs-on: [self-hosted, Windows]
+    timeout-minutes: 1440
+
+    environment: approver
+
+    steps:
+      - name: Await manual approval
+        shell: powershell
+        run: |
+          Write-Host "Waiting for approval in environment 'approver'..."
+          Write-Host "Target env: ${{ inputs.target_env }}"
+          Write-Host "Ticket: ${{ inputs.change_ticket }}"
+          Write-Host "Reason: ${{ inputs.change_reason }}"
