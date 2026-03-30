@@ -1,0 +1,82 @@
+name: "Workflow to deploy Terraform based infra as code."
+
+run-name: "TF ${{ inputs.target_env }} | ${{ inputs.change_ref }} | @${{ github.actor }} | ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: "Select Environment (uat, sit, production, drhub)"
+        required: true
+        type: choice
+        options: [uat, sit, production, drhub]
+
+      working_directory:
+        description: "Terraform config directory path."
+        required: true
+        default: "."
+
+      change_ref:
+        description: "Change referance ID."
+        required: true
+        type: string
+
+      change_reason:
+        description: "Reason for change."
+        required: true
+        type: string
+
+      rollback_plan:
+        description: "Rollback plan."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: "tf-${{ inputs.target_env }}-${{ inputs.working_directory }}"
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: "Preflight"
+    uses: ./.github/workflows/preflight-checks.yml
+    with:
+      target_env: ${{ inputs.target_env }}
+      working_directory: ${{ inputs.working_directory }}
+
+  plan:
+    name: "Plan"
+    needs: preflight
+    uses: ./.github/workflows/tf-plan.yml
+    with:
+      target_env: ${{ inputs.target_env }}
+      selected_branch: ${{ needs.preflight.outputs.selected_branch }}
+      working_directory: ${{ inputs.working_directory }}
+      change_ref: ${{ inputs.change_ref }}
+      change_reason: ${{ inputs.change_reason }}
+      rollback_plan: ${{ inputs.rollback_plan }}
+    secrets: inherit
+
+  approval:
+    name: "Approval gate"
+    needs: plan
+    uses: ./.github/workflows/approval-gate.yml
+    with:
+      target_env: ${{ inputs.target_env }}
+      change_ref: ${{ inputs.change_ref }}
+      change_reason: ${{ inputs.change_reason }}
+
+  apply:
+    name: "Apply"
+    needs: [plan, approval]
+    uses: ./.github/workflows/tf-apply.yml
+    with:
+      target_env: ${{ inputs.target_env }}
+      working_directory: ${{ inputs.working_directory }}
+      plan_commit_sha: ${{ needs.plan.outputs.plan_commit_sha }}
+      plan_artifact_name: ${{ needs.plan.outputs.plan_artifact_name }}
+      change_ref: ${{ inputs.change_ref }}
+    secrets: inherit
