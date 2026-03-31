@@ -43,6 +43,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.
+      
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -60,6 +65,6 @@ jobs:
               "-backend-config=container_name=tfstate" `
               "-backend-config=key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
               
-      - name: Terraform Apply
-        working-directory: ${{ inputs.working_directory }}
-        run: terraform apply -auto-approve
+     # - name: Terraform Apply
+     #   working-directory: ${{ inputs.working_directory }}
+     #   run: terraform apply -auto-approve
