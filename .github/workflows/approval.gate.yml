@@ -1,16 +1,10 @@
-
 name: Approval gate
 
 on:
   workflow_call:
     inputs:
       target_env:
-        required: true
-        type: string
-      change_ref:
-        required: true
-        type: string
-      change_reason:
+        description: Environment for which approval is required
         required: true
         type: string
 
@@ -19,14 +13,17 @@ permissions:
 
 jobs:
   approval:
-    runs-on: [self-hosted, Windows]
-    environment: approver
-    timeout-minutes: 1440
+    name: Manual Approval
+    runs-on: windows-latest
+
+    # ✅ GitHub Environment based approval
+    environment:
+      name: ${{ inputs.target_env }}
+
+    timeout-minutes: 1440   # 24 hours approval window
 
     steps:
-      - shell: powershell
+      - name: Waiting for approval
         run: |
-          Write-Host "Awaiting approval"
-          Write-Host "Env: ${{ inputs.target_env }}"
-          Write-Host "Ticket: ${{ inputs.change_ref }}"
-          Write-Host "Reason: ${{ inputs.change_reason }}"
+          echo "Waiting for manual approval for environment: ${{ inputs.target_env }}"
+``
