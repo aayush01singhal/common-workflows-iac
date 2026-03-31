@@ -43,7 +43,7 @@ permissions:
 jobs:
   plan:
     name: "Plan - ${{ inputs.target_env }} | ${{ inputs.change_ref }}"
-    runs-on: [self-hosted, Windows]
+    runs-on: windows-latest
     environment: ${{ inputs.target_env }}
     timeout-minutes: 60
 
