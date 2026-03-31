@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   setup:
-    runs-on: [self-hosted, Windows]
+    runs-on: windows-latest
     outputs:
       selected_branch: ${{ steps.branch.outputs.branch }}
 
