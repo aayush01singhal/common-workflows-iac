@@ -80,19 +80,20 @@ jobs:
       target_env: ${{ inputs.target_env }}
 
 
+  
   apply:
     name: "Apply"
     needs: [plan, approval]
     uses: aayush01singhal/azure-paas-iac/.github/workflows/tf-apply.yml@main
     with:
-      target_env: ${{ inputs.target_env }
-      working_directory: ${{ inputs.working_directory }
-      selected_branch: ${{ inputs.selected_branch }      
+      target_env: ${{ inputs.target_env }}
+      working_directory: ${{ inputs.working_directory }}
+      selected_branch: ${{ inputs.selected_branch }}
       change_ref: ${{ inputs.change_ref }}
       change_reason: ${{ inputs.change_reason }}
-      rollback_plan: ${{ inputs.rollback_plan }      
-    secrets:       
-       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
 
