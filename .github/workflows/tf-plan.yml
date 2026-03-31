@@ -82,13 +82,15 @@ jobs:
         run: terraform validate
 
       
-      - name: Terraform Plan
+      - name: Terraform Plan        
         shell: pwsh
         working-directory: ${{ inputs.working_directory }}
         run: |
-          terraform plan -input=false -out=tfplan          
-          Write-Host "TERRAFORM PLAN OUTPUT"
-             terraform show -no-color tfplan 
+            terraform plan -input=false -out=tfplan
+            Write-Host "=========== TERRAFORM PLAN OUTPUT ==========="
+            terraform show -no-color tfpla
+
+ 
 
       
 
