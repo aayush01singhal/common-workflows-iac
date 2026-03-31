@@ -44,7 +44,7 @@ jobs:
   plan:
     name: "Plan - ${{ inputs.target_env }} | ${{ inputs.change_ref }}"
     runs-on: windows-latest
-    environment: ${{ inputs.target_env }}
+    environment: production-plan
     timeout-minutes: 60
 
     outputs:
