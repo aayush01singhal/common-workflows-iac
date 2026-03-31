@@ -41,7 +41,7 @@ permissions:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
@@ -51,15 +51,24 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
+      
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
 
       - name: Terraform Init
+        shell: pwsh
         working-directory: ${{ inputs.working_directory }}
         run: |
-            terraform init -input=false \
-              -backend-config="resource_group_name=rg-tfstate-${{ inputs.target_env }}" \
-              -backend-config="storage_account_name=tfterraform${{ inputs.target_env }}" \
-              -backend-config="container_name=tfstate" \
-              -backend-config="key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
+          terraform init -input=false `
+              "-backend-config=resource_group_name=rg-tfstate-${{ inputs.target_env }}" `
+              "-backend-config=storage_account_name=tfterraform${{ inputs.target_env }}" `
+              "-backend-config=container_name=tfstate" `
+              "-backend-config=key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
 
 
       - name: Terraform Format Check
