@@ -26,4 +26,4 @@ jobs:
       - name: Waiting for approval
         run: |
           echo "Waiting for manual approval for environment: ${{ inputs.target_env }}"
-``
+
