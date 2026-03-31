@@ -89,6 +89,7 @@ jobs:
             terraform plan -input=false -out=tfplan
             Write-Host "=========== TERRAFORM PLAN OUTPUT ==========="
             terraform show -no-color tfpla
+            
 
  
 
