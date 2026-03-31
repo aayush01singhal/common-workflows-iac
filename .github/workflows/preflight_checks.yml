@@ -27,7 +27,7 @@ jobs:
       - id: branch
         shell: powershell
         run: |
-          if ("${{ inputs.target_env }}" -in @("development","dev")) {
+          if ("${{ inputs.target_env }}" -in @("development","uat")) {
             $branch = "main"
           } else {
             $branch = "${{ inputs.target_env }}"
