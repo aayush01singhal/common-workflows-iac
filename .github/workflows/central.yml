@@ -91,6 +91,7 @@ jobs:
       selected_branch: ${{ inputs.selected_branch }}
       change_ref: ${{ inputs.change_ref }}
       change_reason: ${{ inputs.change_reason }}
+      rollback_plan: ${{ inputs.rollback_plan }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
