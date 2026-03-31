@@ -72,16 +72,21 @@ jobs:
 
 
       - name: Terraform Format Check
+        shell: pwsh
         working-directory: ${{ inputs.working_directory }}
         run: terraform fmt -check -recursive
 
       - name: Terraform Validate
+        shell: pwsh
         working-directory: ${{ inputs.working_directory }}
         run: terraform validate
 
+      
       - name: Terraform Plan
+        shell: pwsh
         working-directory: ${{ inputs.working_directory }}
-        run:  |
+        run: |
           terraform plan -input=false -out=tfplan
-          terraform show tfpla
+          terraform show tfplan
+      
 
