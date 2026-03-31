@@ -19,7 +19,7 @@ permissions:
 jobs:
   approval:
     name: "Approval - ${{ inputs.target_env }} | ${{ inputs.change_ticket }}"
-    runs-on: [self-hosted, Windows]
+    runs-on: windows-latest
     timeout-minutes: 1440
 
     environment: approver
