@@ -6,9 +6,7 @@ on:
       target_env:
         required: true
         type: string
-      change_ticket:
-        required: true
-        type: string
+     
       change_reason:
         required: true
         type: string
@@ -18,7 +16,7 @@ permissions:
 
 jobs:
   approval:
-    name: "Approval - ${{ inputs.target_env }} | ${{ inputs.change_ticket }}"
+    name: "Approval - ${{ inputs.target_env }}"
     runs-on: windows-latest
     timeout-minutes: 1440
 
