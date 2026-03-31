@@ -86,7 +86,9 @@ jobs:
         shell: pwsh
         working-directory: ${{ inputs.working_directory }}
         run: |
-          terraform plan -input=false -out=tfplan
-          terraform show tfplan
+          terraform plan -input=false -out=tfplan          
+          Write-Host "TERRAFORM PLAN OUTPUT"
+              terraform show -no-color tfpla
+
       
 
