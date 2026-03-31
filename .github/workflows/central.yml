@@ -29,7 +29,8 @@ concurrency:
 jobs:
   preflight:
     name: "Preflight"
-    uses: ./.github/workflows/preflight-checks.yml
+    uses: ./.github/workflows/preflight_checks.yml
+
     with:
       target_env: ${{ inputs.target_env }}
       working_directory: ${{ inputs.working_directory }}
