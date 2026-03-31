@@ -13,18 +13,19 @@ on:
       target_env:
         required: true
         type: string
+        
       selected_branch:
         required: true
         type: string
+        
       working_directory:
         required: true
         type: string
+        
       change_ref:
         required: true
         type: string
-      change_reason:
-        required: true
-        type: string
+      
       rollback_plan:
         required: true
         type: string
@@ -32,6 +33,7 @@ on:
       plan_commit_sha:
         description: "Exact commit SHA used to generate the plan"
         value: ${{ jobs.plan.outputs.plan_commit_sha }}
+        
       plan_artifact_name:
         description: "Artifact name containing tfplan.binary"
         value: ${{ jobs.plan.outputs.plan_artifact_name }}
