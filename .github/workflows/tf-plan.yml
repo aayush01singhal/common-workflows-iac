@@ -1,39 +1,40 @@
-name: Terraform Plan
+name: "Terraform Plan"
 
 on:
-  workflow_call:
+  workflow_call:   
+    secrets:
+          AZURE_CLIENT_ID:
+            required: true
+          AZURE_TENANT_ID:
+            required: true
+          AZURE_SUBSCRIPTION_ID:
+            required: true
     inputs:
       target_env:
         required: true
         type: string
-
       selected_branch:
         required: true
         type: string
-
       working_directory:
         required: true
         type: string
-
       change_ref:
         required: true
         type: string
-
       change_reason:
         required: true
         type: string
-
       rollback_plan:
         required: true
         type: string
-
-    secrets:
-      AZURE_CLIENT_ID:
-        required: true
-      AZURE_TENANT_ID:
-        required: true
-      AZURE_SUBSCRIPTION_ID:
-        required: true
+    outputs:
+      plan_commit_sha:
+        description: "Exact commit SHA used to generate the plan"
+        value: ${{ jobs.plan.outputs.plan_commit_sha }}
+      plan_artifact_name:
+        description: "Artifact name containing tfplan.binary"
+        value: ${{ jobs.plan.outputs.plan_artifact_name }}
 
 permissions:
   contents: read
@@ -41,52 +42,111 @@ permissions:
 
 jobs:
   plan:
+    name: "Plan - ${{ inputs.target_env }} | ${{ inputs.change_ref }}"
     runs-on: windows-latest
+    environment: ${{ inputs.target_env }}
+    timeout-minutes: 60
+
+    outputs:
+      plan_commit_sha: ${{ steps.capture_sha.outputs.sha }}
+      plan_artifact_name: ${{ steps.name_artifact.outputs.art_name }}
+
+    env:
+      # Backend
+      BACKEND_SUB_ID: ${{ secrets.BACKEND_SUBSCRIPTION_ID }}
+      STG_NAME: ${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}
+      STG_CONT: ${{ secrets.BACKEND_CONTAINER_NAME }}
+      RG_NAME: ${{ secrets.BACKEND_RESOURCE_GROUP }}
+
+      # OIDC
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      TF_INPUT: "0"
+      TF_IN_AUTOMATION: "true"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
-      
-      - name: Azure Login (OIDC)
+          ref: ${{ inputs.selected_branch }}
+
+      - name: Capture exact commit SHA
+        id: capture_sha
+        shell: powershell
+        run: |
+          $sha = (git rev-parse HEAD).Trim()
+          echo "sha=$sha" >> $env:GITHUB_OUTPUT
+
+      - name: Name plan artifact
+        id: name_artifact
+        shell: powershell
+        run: |
+          echo "art_name=tf-plan-${{ inputs.target_env }}-${{ github.run_id }}" >> $env:GITHUB_OUTPUT
+
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-
-      - name: Terraform Init
-        shell: pwsh
-        working-directory: ${{ inputs.working_directory }}
+      - name: Approval context (summary)
+        shell: powershell
         run: |
-          terraform init -input=false `
-              "-backend-config=resource_group_name=rg-tfstate-${{ inputs.target_env }}" `
-              "-backend-config=storage_account_name=tfterraform${{ inputs.target_env }}" `
-              "-backend-config=container_name=tfstate" `
-              "-backend-config=key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
+          "## Deployment request" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Environment: ${{ inputs.target_env }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Ticket: ${{ inputs.change_ref }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Reason: ${{ inputs.change_reason }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Rollback: ${{ inputs.rollback_plan }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Actor: @${{ github.actor }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Ref: ${{ github.ref }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Commit: ${{ github.sha }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
-
-      - name: Terraform Format Check
-        shell: pwsh
+      - name: Terraform init (backend)
+        shell: powershell
         working-directory: ${{ inputs.working_directory }}
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Validate
-        shell: pwsh
-        working-directory: ${{ inputs.working_directory }}
-        run: terraform validate
-
-      
-      - name: Terraform Plan        
-        shell: pwsh
-        working-directory: ${{ inputs.working_directory }}
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ env.BACKEND_SUB_ID }}
         run: |
-            terraform plan -input=false -out=tfplan
-            Write-Host "=========== TERRAFORM PLAN OUTPUT ==========="
-            terraform show -no-color tfplan
-            
+          terraform init `
+            -backend-config="subscription_id=$env:BACKEND_SUB_ID" `
+            -backend-config="storage_account_name=$env:STG_NAME" `
+            -backend-config="container_name=$env:STG_CONT" `
+            -backend-config="resource_group_name=$env:RG_NAME" `
+            -reconfigure
+
+      - name: Terraform validate, fmt check, plan
+        shell: powershell
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          terraform version
+          terraform fmt -check
+          terraform validate
+
+          terraform plan -out="tfplan.binary"
+          terraform show -no-color "tfplan.binary" > plan_preview.txt
+
+          "## Terraform plan preview" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Get-Content plan_preview.txt | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Upload plan file
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name_artifact.outputs.art_name }}
+          path: ${{ inputs.working_directory }}/tfplan.binary
+          retention-days: 1
+
+      - name: Upload plan preview (evidence)
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.name_artifact.outputs.art_name }}-preview"
+          path: ${{ inputs.working_directory }}/plan_preview.txt
+          retention-days: 7
