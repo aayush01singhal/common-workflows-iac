@@ -50,7 +50,7 @@ jobs:
   approval:
     name: "Approval gate"
     needs: plan
-    uses: ./.github/workflows/approval-gate.yml
+    uses: ./.github/workflows/approval.gate.yml
     with:
       target_env: ${{ inputs.target_env }}
 
