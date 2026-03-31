@@ -1,4 +1,4 @@
-name: "Workflow to deploy Terraform based infra as code"
+name: "Workflow to deploy Terraform based infra "
 
 run-name: "TF ${{ inputs.target_env }}"
 
