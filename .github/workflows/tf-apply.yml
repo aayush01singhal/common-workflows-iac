@@ -14,6 +14,14 @@ on:
       change_ref:
         required: true
         type: string
+      
+      change_reason:
+        required: true
+        type: string
+      rollback_plan:
+        required: true
+        type: string
+
 
     secrets:
       AZURE_CLIENT_ID:
