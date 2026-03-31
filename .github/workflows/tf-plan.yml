@@ -81,4 +81,7 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ${{ inputs.working_directory }}
-        run: terraform plan -input=false
+        run:  |
+          terraform plan -input=false -out=tfplan
+          terraform show tfpla
+
