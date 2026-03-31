@@ -54,7 +54,13 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ inputs.working_directory }}
-        run: terraform init -input=false
+        run: |
+            terraform init -input=false \
+              -backend-config="resource_group_name=rg-tfstate-${{ inputs.target_env }}" \
+              -backend-config="storage_account_name=tfterraform${{ inputs.target_env }}" \
+              -backend-config="container_name=tfstate" \
+              -backend-config="key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
+
 
       - name: Terraform Format Check
         working-directory: ${{ inputs.working_directory }}
