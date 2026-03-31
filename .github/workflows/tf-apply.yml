@@ -37,16 +37,29 @@ permissions:
 
 jobs:
   apply:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Terraform Init
+      - name: Terraform Init        
+        shell: pwsh
         working-directory: ${{ inputs.working_directory }}
-        run: terraform init
-
+        run: |
+          terraform init -input=false `
+              "-backend-config=resource_group_name=rg-tfstate-${{ inputs.target_env }}" `
+              "-backend-config=storage_account_name=tfterraform${{ inputs.target_env }}" `
+              "-backend-config=container_name=tfstate" `
+              "-backend-config=key=${{ inputs.target_env }}/${{ inputs.working_directory }}/terraform.tfstate"
+              
       - name: Terraform Apply
         working-directory: ${{ inputs.working_directory }}
         run: terraform apply -auto-approve
