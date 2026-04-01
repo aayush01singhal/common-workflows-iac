@@ -6,7 +6,9 @@ on:
       target_env:
         required: true
         type: string
-     
+      change_ref:
+        required: true
+        type: string
       change_reason:
         required: true
         type: string
@@ -16,7 +18,7 @@ permissions:
 
 jobs:
   approval:
-    name: "Approval - ${{ inputs.target_env }}"
+    name: "Approval - ${{ inputs.target_env }} "
     runs-on: windows-latest
     timeout-minutes: 1440
 
@@ -27,6 +29,5 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Waiting for approval in environment 'approver'..."
-          Write-Host "Target env: ${{ inputs.target_env }}"
-          Write-Host "Ticket: ${{ inputs.change_ticket }}"
+          Write-Host "Target env: ${{ inputs.target_env }}"          
           Write-Host "Reason: ${{ inputs.change_reason }}"
