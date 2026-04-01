@@ -30,7 +30,7 @@ jobs:
         shell: powershell
         run: |
           $env_input = "${{ inputs.target_env }}"
-          if ($env_input -eq "production" -or $env_input -eq "drhub") {
+          if ($env_input -eq "production" -or $env_input -eq "dev") {
             $branch = "main"
           } else {
             $branch = $env_input
