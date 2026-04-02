@@ -1,3 +1,4 @@
+# .github/workflows/terraform-plan.yml
 name: "Terraform Plan"
  
 on:
@@ -40,7 +41,6 @@ jobs:
   plan:
     name: "Plan - ${{ inputs.target_env }} | ${{ inputs.change_ref }}"
     runs-on: windows-latest
-    environment: ${{ inputs.target_env }}
     timeout-minutes: 60
  
     outputs:
@@ -48,13 +48,13 @@ jobs:
       plan_artifact_name: ${{ inputs.plan_artifact_name }}
  
     env:
-      # Backend
+      # Backend (repo secrets)
       BACKEND_SUB_ID: ${{ secrets.BACKEND_SUBSCRIPTION_ID }}
       STG_NAME: ${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}
       STG_CONT: ${{ secrets.BACKEND_CONTAINER_NAME }}
       RG_NAME: ${{ secrets.BACKEND_RESOURCE_GROUP }}
  
-      # OIDC (Terraform AzureRM env vars)
+      # OIDC (repo secrets)
       ARM_USE_OIDC: "true"
       ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
@@ -64,13 +64,11 @@ jobs:
       TF_IN_AUTOMATION: "true"
  
     steps:
-      # 1) Checkout caller repo (terraform code)
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.selected_branch }}
  
-      # 2) Checkout shared workflow repo (scripts live here)
       - name: Checkout common workflow scripts
         uses: actions/checkout@v4
         with:
@@ -87,7 +85,7 @@ jobs:
         id: capture_sha
         shell: powershell
         run: >
-          & "${{ github.workspace }}\_common\.github\scripts\capture-sha.ps1"
+          & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\capture-sha.ps1"
  
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -99,7 +97,7 @@ jobs:
       - name: Publish approval context
         shell: powershell
         run: >
-          & "${{ github.workspace }}\_common\.github\scripts\publish-approval-context.ps1"
+          & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\publish-approval-context.ps1"
           -TargetEnv "${{ inputs.target_env }}"
           -ChangeRef "${{ inputs.change_ref }}"
           -ChangeReason "${{ inputs.change_reason }}"
@@ -111,13 +109,13 @@ jobs:
         env:
           ARM_SUBSCRIPTION_ID: ${{ env.BACKEND_SUB_ID }}
         run: >
-          & "${{ github.workspace }}\_common\.github\scripts\terraform-init.ps1"
+          & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\terraform-init.ps1"
  
       - name: Terraform plan and evidence generation
         shell: powershell
         working-directory: ${{ inputs.working_directory }}
         run: >
-          & "${{ github.workspace }}\_common\.github\scripts\terraform-plan-evidence.ps1"
+          & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\terraform-plan-evidence.ps1"
           -TargetEnv "${{ inputs.target_env }}"
           -ChangeRef "${{ inputs.change_ref }}"
           -ChangeReason "${{ inputs.change_reason }}"
