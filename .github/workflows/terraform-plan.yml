@@ -1,4 +1,6 @@
+# .github/workflows/terraform-plan.yml
 name: "Terraform Plan"
+ 
 on:
   workflow_call:
     inputs:
@@ -22,173 +24,96 @@ on:
         type: string
       plan_artifact_name:
         required: true
-        type: string  
+        type: string
     outputs:
       plan_commit_sha:
-        description: "Exact commit SHA used to generate the plan"
         value: ${{ jobs.plan.outputs.plan_commit_sha }}
       plan_artifact_name:
-        description: "Artifact name containing tfplan.binary"
         value: ${{ jobs.plan.outputs.plan_artifact_name }}
+ 
 permissions:
   contents: read
   id-token: write
+ 
 jobs:
   plan:
     name: "Plan - ${{ inputs.target_env }} | ${{ inputs.change_ref }}"
     runs-on: windows-latest
     environment: ${{ inputs.target_env }}
     timeout-minutes: 60
+ 
     outputs:
       plan_commit_sha: ${{ steps.capture_sha.outputs.sha }}
       plan_artifact_name: ${{ inputs.plan_artifact_name }}
+ 
     env:
-      # Backend
       BACKEND_SUB_ID: ${{ secrets.BACKEND_SUBSCRIPTION_ID }}
       STG_NAME: ${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}
       STG_CONT: ${{ secrets.BACKEND_CONTAINER_NAME }}
       RG_NAME: ${{ secrets.BACKEND_RESOURCE_GROUP }}
-      # OIDC
+ 
       ARM_USE_OIDC: "true"
       ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+ 
       TF_INPUT: "0"
       TF_IN_AUTOMATION: "true"
+ 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.selected_branch }}
+ 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+ 
       - name: Capture exact commit SHA
         id: capture_sha
         shell: powershell
-        run: |
-          $sha = (git rev-parse HEAD).Trim()
-          echo "sha=$sha" >> $env:GITHUB_OUTPUT
-      #- name: Name plan artifact
-      #  id: name_artifact
-      #  shell: powershell
-      #  run: |
-       #   echo "art_name=tf-plan-${{ inputs.target_env }}-${{ github.run_id }}" >> $env:GITHUB_OUTPUT
+        run: .\.github\scripts\capture-sha.ps1
+ 
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.ARM_CLIENT_ID }}
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-      - name: Approval context (summary)
+ 
+      - name: Publish approval context
         shell: powershell
-        run: |
-          "## Deployment request" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Environment: ${{ inputs.target_env }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Ticket: ${{ inputs.change_ref }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Reason: ${{ inputs.change_reason }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Rollback: ${{ inputs.rollback_plan }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Actor: @${{ github.actor }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Ref: ${{ github.ref }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Commit: ${{ github.sha }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        run: >
+          .\.github\scripts\publish-approval-context.ps1
+          -TargetEnv "${{ inputs.target_env }}"
+          -ChangeRef "${{ inputs.change_ref }}"
+          -ChangeReason "${{ inputs.change_reason }}"
+          -RollbackPlan "${{ inputs.rollback_plan }}"
+ 
       - name: Terraform init (backend)
         shell: powershell
         working-directory: ${{ inputs.working_directory }}
         env:
           ARM_SUBSCRIPTION_ID: ${{ env.BACKEND_SUB_ID }}
-        run: |
-          terraform init `
-            -backend-config="subscription_id=$env:BACKEND_SUB_ID" `
-            -backend-config="storage_account_name=$env:STG_NAME" `
-            -backend-config="container_name=$env:STG_CONT" `
-            -backend-config="resource_group_name=$env:RG_NAME" `
-            -reconfigure
+        run: .\.github\scripts\terraform-init.ps1
  
-      - name: Terraform validate, fmt check, plan
+      - name: Terraform plan and evidence generation
         shell: powershell
         working-directory: ${{ inputs.working_directory }}
-        run: |
-          $ErrorActionPreference = 'Stop'
- 
-          terraform version
-          terraform fmt -check
-          terraform validate
- 
-          terraform plan -out="tfplan.binary"
-          terraform show -no-color "tfplan.binary" > plan_preview.txt
-          terraform show -json "tfplan.binary" > tfplan.json
-          $plan = Get-Content -Raw -Path "tfplan.json" | ConvertFrom-Json
-          $add = 0; $change = 0; $destroy = 0; $replace = 0
-          if ($null -ne $plan.resource_changes) {
-            foreach ($rc in $plan.resource_changes) {
-              $actions = $rc.change.actions
-              if ($actions -contains "create") { $add++ }
-              if ($actions -contains "update") { $change++ }
-              if ($actions -contains "delete") { $destroy++ }
-              if (($actions -contains "delete") -and ($actions -contains "create")) { $replace++ }  # typical replace
-            }
-          }
- 
-          $stats = [ordered]@{
-            environment      = "${{ inputs.target_env }}"
-            change_ref       = "${{ inputs.change_ref }}"
-            commit_sha       = "${{ steps.capture_sha.outputs.sha }}"
-            branch           = "${{ inputs.selected_branch }}"
-            adds             = $add
-            changes          = $change
-            destroys         = $destroy
-            replaces         = $replace
-            generated_at_utc = (Get-Date).ToUniversalTime().ToString("s") + "Z"
-          }
- 
-          $stats | ConvertTo-Json -Depth 10 | Out-File -FilePath "plan_stats.json" -Encoding utf8
-          $runUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
- 
-          $previewLines = Get-Content -Path "plan_preview.txt" -TotalCount 300
-          $previewText = ($previewLines -join "`n")
- 
-          $approvalPack = @"
-              # Approval Pack
- 
-              ## Request
-              - Target environment: **${{ inputs.target_env }}**
-              - Change reference: **${{ inputs.change_ref }}**
-              - Reason: ${{ inputs.change_reason }}
-              - Rollback plan: ${{ inputs.rollback_plan }}
- 
-              ## Source
-              - Repo: `${{ github.repository }}`
-              - Branch: `${{ inputs.selected_branch }}`
-              - Commit SHA (planned): `${{ steps.capture_sha.outputs.sha }}`
-              - Actor: `@${{ github.actor }}`
-              - Workflow run: $runUrl
- 
-              ## Terraform Plan Summary
-              - Adds: **$add**
-              - Changes: **$change**
-              - Destroys: **$destroy**
-              - Replaces: **$replace**
- 
-              ## Evidence Artifacts
-              - tfplan.binary (used later for apply)
-              - plan_preview.txt (full plan preview)
-              - tfplan.json + plan_stats.json (structured evidence)
- 
-              ## Plan Preview (excerpt)
-          "@
- 
-          $approvalPack | Out-File -FilePath "approval_pack.md" -Encoding utf8
- 
-          "## Terraform plan summary" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Adds: **$add**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Changes: **$change**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Destroys: **$destroy**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "- Replaces: **$replace**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          "Approval Pack generated: approval_pack.md (see artifacts)." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        run: >
+          .\.github\scripts\terraform-plan-evidence.ps1
+          -TargetEnv "${{ inputs.target_env }}"
+          -ChangeRef "${{ inputs.change_ref }}"
+          -ChangeReason "${{ inputs.change_reason }}"
+          -RollbackPlan "${{ inputs.rollback_plan }}"
+          -SelectedBranch "${{ inputs.selected_branch }}"
+          -PlanArtifactName "${{ inputs.plan_artifact_name }}"
+          -Repository "${{ github.repository }}"
+          -RunId "${{ github.run_id }}"
+          -Actor "${{ github.actor }}"
+          -CommitSha "${{ steps.capture_sha.outputs.sha }}"
  
       - name: Upload plan file
         uses: actions/upload-artifact@v4
@@ -196,25 +121,29 @@ jobs:
           name: ${{ inputs.plan_artifact_name }}
           path: ${{ inputs.working_directory }}/tfplan.binary
           retention-days: 1
+ 
       - name: Upload plan preview (evidence)
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plan_artifact_name }}-preview"
           path: ${{ inputs.working_directory }}/plan_preview.txt
           retention-days: 7
+ 
       - name: Upload plan JSON (evidence)
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plan_artifact_name }}-json"
           path: ${{ inputs.working_directory }}/tfplan.json
           retention-days: 7
-      - name: Upload approval pack (markdown)
+ 
+      - name: Upload approval pack
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plan_artifact_name }}-approval-pack"
           path: ${{ inputs.working_directory }}/approval_pack.md
           retention-days: 7
-      - name: Upload plan stats (evidence)
+ 
+      - name: Upload plan stats
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plan_artifact_name }}-stats"
