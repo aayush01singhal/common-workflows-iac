@@ -74,8 +74,9 @@ jobs:
       - name: Capture exact commit SHA
         id: capture_sha
         shell: powershell
-        run: |
-         & "$env:GITHUB_WORKSPACE\.github\scripts\capture-sha.ps1"
+        run: >
+         & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\capture-sha.ps1"
+ 
  
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -115,7 +116,7 @@ jobs:
           -Repository "${{ github.repository }}"
           -RunId "${{ github.run_id }}"
           -Actor "${{ github.actor }}"
-          -CommitSha "${{ steps.capture_sha.outputs.sha }}"
+          -Commit "${{ steps.capture_.outputs. }}"
  
       - name: Upload plan file
         uses: actions/upload-artifact@v4
