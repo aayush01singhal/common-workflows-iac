@@ -18,19 +18,13 @@ permissions:
  
 jobs:
   approval:
-    name: "Approval - ${{ inputs.target_env }}"
+    name: "Approve apply | env=${{ inputs.target_env }} | ref=${{ inputs.change_ref }}"
     runs-on: windows-latest
     timeout-minutes: 1440
- 
     environment: ${{ inputs.target_env }}
  
     steps:
-      - name: Approval context
+      - name: Approved
         shell: powershell
         run: |
-          "## Approval Required" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY
-          "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "- Target environment: ${{ inputs.target_env }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "- Change reference: ${{ inputs.change_ref }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "- Reason: ${{ inputs.change_reason }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "- Requested by: @${{ github.actor }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          Write-Host "Approved. Continuing to apply."
