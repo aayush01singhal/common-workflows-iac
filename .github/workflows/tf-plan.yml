@@ -21,6 +21,10 @@ on:
       rollback_plan:
         required: true
         type: string
+      plan_artifact_name:
+        required: true
+        type: string  
+       
     outputs:
       plan_commit_sha:
         description: "Exact commit SHA used to generate the plan"
@@ -42,7 +46,7 @@ jobs:
  
     outputs:
       plan_commit_sha: ${{ steps.capture_sha.outputs.sha }}
-      plan_artifact_name: ${{ steps.name_artifact.outputs.art_name }}
+      plan_artifact_name: ${{ inputs.plan_artifact_name }}
  
     env:
       # Backend
@@ -78,11 +82,11 @@ jobs:
           $sha = (git rev-parse HEAD).Trim()
           echo "sha=$sha" >> $env:GITHUB_OUTPUT
  
-      - name: Name plan artifact
-        id: name_artifact
-        shell: powershell
-        run: |
-          echo "art_name=tf-plan-${{ inputs.target_env }}-${{ github.run_id }}" >> $env:GITHUB_OUTPUT
+      #- name: Name plan artifact
+      #  id: name_artifact
+      #  shell: powershell
+      #  run: |
+       #   echo "art_name=tf-plan-${{ inputs.target_env }}-${{ github.run_id }}" >> $env:GITHUB_OUTPUT
  
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -214,35 +218,35 @@ jobs:
       - name: Upload plan file
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.name_artifact.outputs.art_name }}
+          name: ${{ inputs.plan_artifact_name }}
           path: ${{ inputs.working_directory }}/tfplan.binary
           retention-days: 1
  
       - name: Upload plan preview (evidence)
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.name_artifact.outputs.art_name }}-preview"
+          name: "${{ inputs.plan_artifact_name }}-preview"
           path: ${{ inputs.working_directory }}/plan_preview.txt
           retention-days: 7
  
       - name: Upload plan JSON (evidence)
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.name_artifact.outputs.art_name }}-json"
+          name: "${{ inputs.plan_artifact_name }}-json"
           path: ${{ inputs.working_directory }}/tfplan.json
           retention-days: 7
  
       - name: Upload approval pack (markdown)
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.name_artifact.outputs.art_name }}-approval-pack"
+          name: "${{ inputs.plan_artifact_name }}-approval-pack"
           path: ${{ inputs.working_directory }}/approval_pack.md
           retention-days: 7
  
       - name: Upload plan stats (evidence)
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.name_artifact.outputs.art_name }}-stats"
+          name: "${{ inputs.plan_artifact_name }}-stats"
           path: ${{ inputs.working_directory }}/plan_stats.json
           retention-days: 7
  
