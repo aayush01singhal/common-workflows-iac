@@ -1,4 +1,4 @@
-name: "Approval Pack"
+name: "Publish Summary"
  
 on:
   workflow_call:
@@ -27,12 +27,12 @@ permissions:
  
 jobs:
   pack:
-    name: "Approval Pack | env=${{ inputs.target_env }} | ref=${{ inputs.change_ref }}"
+    name: "Summary | env=${{ inputs.target_env }} | ref=${{ inputs.change_ref }}"
     runs-on: windows-latest
     timeout-minutes: 30
  
     steps:
-      - name: Download approval pack artifact
+      - name: Download Summary artifact
         uses: actions/download-artifact@v4
         with:
           name: "${{ inputs.plan_artifact_name }}-approval-pack"
@@ -50,12 +50,12 @@ jobs:
           name: "${{ inputs.plan_artifact_name }}-preview"
           path: evidence
  
-      - name: Publish approval pack to job summary (pre-approval)
+      - name: Publish Summary to job summary (pre-approval)
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $runUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          "## APPROVAL PACK (review before approving)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY
+          "## Summary (review before approving)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY
           "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Target environment: **${{ inputs.target_env }}**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Change reference: **${{ inputs.change_ref }}**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
