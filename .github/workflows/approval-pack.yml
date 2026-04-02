@@ -53,39 +53,42 @@ jobs:
       - name: Publish approval pack to job summary (pre-approval)
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
           $runUrl = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
- 
           "## APPROVAL PACK (review before approving)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY
-          '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Target environment: **${{ inputs.target_env }}**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Change reference: **${{ inputs.change_ref }}**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Reason: ${{ inputs.change_reason }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Rollback: ${{ inputs.rollback_plan }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Requested by: @${{ github.actor }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- Workflow run: $runUrl" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
- 
+          "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           if (Test-Path "evidence\plan_stats.json") {
             $stats = Get-Content -Raw "evidence\plan_stats.json" | ConvertFrom-Json
             "### Terraform plan counts" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-           '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
             "- Adds: **$($stats.adds)**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
             "- Changes: **$($stats.changes)**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
             "- Destroys: **$($stats.destroys)**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
             "- Replaces: **$($stats.replaces)**" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-            '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          } else {
+            "### Terraform plan counts" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            "- plan_stats.json not found (stats unavailable)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           }
- 
           "### Plan preview (first 250 lines)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "```" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          # IMPORTANT: Use ~~~ fences instead of ``` to avoid PowerShell backtick parsing issues
+          "~~~" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           if (Test-Path "evidence\plan_preview.txt") {
             Get-Content "evidence\plan_preview.txt" -TotalCount 250 | Out-File -Append $env:GITHUB_STEP_SUMMARY
           } else {
             "plan_preview.txt not found." | Out-File -Append $env:GITHUB_STEP_SUMMARY
           }
-          "```" | Out-File -Append $env:GITHUB_STEP_SUMMARY
- 
+          "~~~" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "### Evidence artifacts" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           "- ${{ inputs.plan_artifact_name }} (tfplan.binary)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
