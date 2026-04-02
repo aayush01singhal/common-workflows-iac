@@ -1,5 +1,5 @@
 name: "Approval Gate"
-
+ 
 on:
   workflow_call:
     inputs:
@@ -12,22 +12,25 @@ on:
       change_reason:
         required: true
         type: string
-
+ 
 permissions:
   contents: read
-
+ 
 jobs:
   approval:
-    name: "Approval - ${{ inputs.target_env }} "
+    name: "Approval - ${{ inputs.target_env }}"
     runs-on: windows-latest
     timeout-minutes: 1440
-
-    environment: approver
-
+ 
+    environment: ${{ inputs.target_env }}
+ 
     steps:
-      - name: Await manual approval
+      - name: Approval context
         shell: powershell
         run: |
-          Write-Host "Waiting for approval in environment 'approver'..."
-          Write-Host "Target env: ${{ inputs.target_env }}"          
-          Write-Host "Reason: ${{ inputs.change_reason }}"
+          "## Approval Required" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY
+          "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "- Target environment: ${{ inputs.target_env }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "- Change reference: ${{ inputs.change_ref }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "- Reason: ${{ inputs.change_reason }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "- Requested by: @${{ github.actor }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
