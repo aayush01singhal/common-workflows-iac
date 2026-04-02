@@ -74,7 +74,8 @@ jobs:
       - name: Capture exact commit SHA
         id: capture_sha
         shell: powershell
-        run: .\.github\scripts\capture-sha.ps1
+        run: |
+         & "$env:GITHUB_WORKSPACE\.github\scripts\capture-sha.ps1"
  
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -85,8 +86,8 @@ jobs:
  
       - name: Publish approval context
         shell: powershell
-        run: >
-          .\.github\scripts\publish-approval-context.ps1
+        run: |
+          & "$env:GITHUB_WORKSPACE\.github\scripts\publish-approval-context.ps1" `
           -TargetEnv "${{ inputs.target_env }}"
           -ChangeRef "${{ inputs.change_ref }}"
           -ChangeReason "${{ inputs.change_reason }}"
@@ -97,13 +98,14 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         env:
           ARM_SUBSCRIPTION_ID: ${{ env.BACKEND_SUB_ID }}
-        run: .\.github\scripts\terraform-init.ps1
+        run: |
+         & "$env:GITHUB_WORKSPACE\.github\scripts\terraform-init.ps1"
  
       - name: Terraform plan and evidence generation
         shell: powershell
         working-directory: ${{ inputs.working_directory }}
-        run: >
-          .\.github\scripts\terraform-plan-evidence.ps1
+        run: |
+          & "$env:GITHUB_WORKSPACE\.github\scripts\terraform-plan-evidence.ps1" `
           -TargetEnv "${{ inputs.target_env }}"
           -ChangeRef "${{ inputs.change_ref }}"
           -ChangeReason "${{ inputs.change_reason }}"
