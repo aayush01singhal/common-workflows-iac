@@ -1,4 +1,3 @@
-# .github/workflows/publish-summary.yml
 name: "Publish Summary"
  
 on:
@@ -19,6 +18,9 @@ on:
       plan_artifact_name:
         required: true
         type: string
+      working_directory:
+        required: true
+        type: string
  
 permissions:
   contents: read
@@ -37,6 +39,12 @@ jobs:
           ref: main
           path: _common
  
+      - name: Download Summary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.plan_artifact_name }}-approval-pack"
+          path: evidence
+ 
       - name: Download plan stats artifact
         uses: actions/download-artifact@v4
         with:
@@ -52,7 +60,7 @@ jobs:
       - name: Publish Summary to job summary (pre-approval)
         shell: powershell
         run: >
-          & "${env:GITHUB_WORKSPACE}\_common\.github\scripts\publish-summary.ps1"
+          & "${{ github.workspace }}\_common\.github\scripts\publish-summary.ps1"
           -TargetEnv "${{ inputs.target_env }}"
           -ChangeRef "${{ inputs.change_ref }}"
           -ChangeReason "${{ inputs.change_reason }}"
